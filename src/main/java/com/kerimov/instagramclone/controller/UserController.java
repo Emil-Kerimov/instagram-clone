@@ -20,7 +20,7 @@ public class UserController {
         return userService.getAllUsers();
     }
 
-    @PostMapping("/create")
+    @PostMapping
     public User createUser(@RequestBody CreateUserRequest request){
         return userService.createUser(request);
     }

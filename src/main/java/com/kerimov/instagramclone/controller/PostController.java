@@ -15,7 +15,7 @@ import java.util.UUID;
 public class PostController {
     private final IPostService postService;
 
-    @GetMapping("/all")
+    @GetMapping
     public List<PostDto> getPosts() {
         return postService.getPosts();
     }
