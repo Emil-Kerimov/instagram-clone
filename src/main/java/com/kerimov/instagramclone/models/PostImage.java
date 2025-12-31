@@ -2,11 +2,14 @@ package com.kerimov.instagramclone.models;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.UUID;
 
 @Entity
-@Data
+@Getter
+@Setter
 @Table(name = "post_images")
 public class PostImage {
     @Id

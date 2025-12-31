@@ -1,7 +1,7 @@
 package com.kerimov.instagramclone.models;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
@@ -10,20 +10,24 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Data
+@Getter
+@Setter
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table(name = "users")
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(unique = true ,nullable = false)
+    @Column(unique = true ,nullable = true) //TODO: TEST CHANGE
     private String username;
 
-    @Column(unique = true,nullable = false)
+    @Column(unique = true,nullable = true) //TODO: TEST CHANGE
     private String email;
 
-    @Column(nullable = false)
+    @Column(nullable = true) //TODO: TEST CHANGE
     private String password;
 
     @Column(columnDefinition = "text")
