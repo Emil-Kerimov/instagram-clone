@@ -1,10 +1,8 @@
 package com.kerimov.instagramclone.controller;
 
 import com.kerimov.instagramclone.dto.PostDto;
-import com.kerimov.instagramclone.models.Post;
-import com.kerimov.instagramclone.service.PostService;
+import com.kerimov.instagramclone.service.post.IPostService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -15,7 +13,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("${api.prefix}/posts")
 public class PostController {
-    private final PostService postService;
+    private final IPostService postService;
 
     @GetMapping("/all")
     public List<PostDto> getPosts() {

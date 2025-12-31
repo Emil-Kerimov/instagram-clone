@@ -3,8 +3,7 @@ package com.kerimov.instagramclone.controller;
 import com.kerimov.instagramclone.dto.UserDto;
 import com.kerimov.instagramclone.models.User;
 import com.kerimov.instagramclone.request.CreateUserRequest;
-import com.kerimov.instagramclone.service.UserService;
-import lombok.AllArgsConstructor;
+import com.kerimov.instagramclone.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,7 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("${api.prefix}/users")
 public class UserController {
-    private final UserService userService;
+    private final IUserService userService;
 
     @GetMapping
     public List<UserDto> getAllUsers(){
