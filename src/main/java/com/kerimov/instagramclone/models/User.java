@@ -21,13 +21,13 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(unique = true ,nullable = true) //TODO: TEST CHANGE
+    @Column(unique = true ,nullable = false)
     private String username;
 
-    @Column(unique = true,nullable = true) //TODO: TEST CHANGE
+    @Column(unique = true,nullable = false)
     private String email;
 
-    @Column(nullable = true) //TODO: TEST CHANGE
+    @Column(nullable = false)
     private String password;
 
     @Column(columnDefinition = "text")
