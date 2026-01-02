@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:15
+    container_name: insta_postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: instaclonedb
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+      TZ: Europe/Kyiv
+    volumes:
+      - ./docker-data/postgres:/var/lib/postgresql/data
+
+  app:
+    build: .
+    container_name: instagram_backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/instaclonedb
