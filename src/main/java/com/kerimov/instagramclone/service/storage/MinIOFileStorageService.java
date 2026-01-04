@@ -1,7 +1,6 @@
 package com.kerimov.instagramclone.service.storage;
 
 import com.kerimov.instagramclone.exceptions.FileStorageServiceException;
-import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -15,7 +14,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class MinIOFileStorageService {
+public class MinIOFileStorageService implements IMinIOFileStorageService {
     private final S3Client s3Client;
 
     @Value("${minio.bucket.name}")
@@ -24,6 +23,7 @@ public class MinIOFileStorageService {
     @Value("${minio.url}")
     private String url;
 
+    @Override
     public String upload(MultipartFile file){
         try {
             String fileId = UUID.randomUUID().toString();
@@ -45,5 +45,10 @@ public class MinIOFileStorageService {
             throw new FileStorageServiceException("loading file to MinIO is not possible");
         }
 
+    }
+
+    @Override
+    public String getFileUrl(String fileName) {
+        return url+"/"+bucketName+"/"+ fileName;
     }
 }
