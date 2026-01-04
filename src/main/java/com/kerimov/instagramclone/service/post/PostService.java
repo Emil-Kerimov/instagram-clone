@@ -9,6 +9,7 @@ import com.kerimov.instagramclone.repository.PostRepository;
 import com.kerimov.instagramclone.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -27,6 +28,7 @@ public class PostService implements IPostService {
         return postMapper.map((postRepository.findAll()));
     }
 
+    @Transactional
     @Override
     public PostDto createPost(UUID userId, String content, List<MultipartFile> images) {
         User user = userRepository.findById(userId)

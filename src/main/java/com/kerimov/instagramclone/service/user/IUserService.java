@@ -9,5 +9,5 @@ import java.util.List;
 public interface IUserService {
     List<UserDto> getAllUsers();
 
-    User createUser(CreateUserRequest request);
+    UserDto createUser(CreateUserRequest request);
 }
