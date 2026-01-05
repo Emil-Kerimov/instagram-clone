@@ -12,6 +12,19 @@ services:
     volumes:
       - ./docker-data/postgres:/var/lib/postgresql/data
 
+  minio:
+    image: minio/minio
+    container_name: insta_minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: adminpassword
+    command: server /data --console-address ":9001"
+    volumes:
+      - ./docker-data/minio:/data
+
   app:
     build: .
     container_name: instagram_backend
@@ -19,5 +32,7 @@ services:
       - "8080:8080"
     depends_on:
       - db
+      - minio
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/instaclonedb
+      MINIO_URL: http://minio:9000
