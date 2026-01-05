@@ -9,6 +9,7 @@ import com.kerimov.instagramclone.service.storage.IMinIOFileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -28,8 +29,9 @@ public class UserService implements IUserService {
         return userMapper.map(userRepository.findAll());
     }
 
+    @Transactional
     @Override
-    public User createUser(CreateUserRequest request, MultipartFile file) {
+    public UserDto createUser(CreateUserRequest request, MultipartFile file) {
         if(userRepository.existsByEmail(request.getEmail())){ throw new RuntimeException("msg");}
 
         String imageUrl;
@@ -39,12 +41,13 @@ public class UserService implements IUserService {
             imageUrl = minioFileStorageService.upload(file);
         }
 
-        return userRepository.save(User.builder()
+            User createdUser =  userRepository.save(User.builder()
                 .username(request.getUsername())
                 .bio(request.getBio())
                 .email(request.getEmail())
                 .imageUrl(imageUrl)
                 .password(request.getPassword())
                 .build());
+        return userMapper.map(createdUser);
     }
 }

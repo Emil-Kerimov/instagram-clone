@@ -24,7 +24,7 @@ public class UserController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public User createUser(@RequestPart("request") CreateUserRequest request,
+    public UserDto createUser(@RequestPart("request") CreateUserRequest request,
                            @RequestPart(value = "file", required = false) MultipartFile file){
         return userService.createUser(request, file);
     }

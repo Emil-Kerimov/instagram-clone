@@ -11,5 +11,5 @@ import java.util.List;
 public interface IUserService {
     List<UserDto> getAllUsers();
 
-    User createUser(CreateUserRequest request, MultipartFile file);
+    UserDto createUser(CreateUserRequest request, MultipartFile file);
 }
