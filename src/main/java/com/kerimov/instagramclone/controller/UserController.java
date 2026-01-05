@@ -5,8 +5,11 @@ import com.kerimov.instagramclone.models.User;
 import com.kerimov.instagramclone.request.CreateUserRequest;
 import com.kerimov.instagramclone.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.awt.*;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -20,8 +23,9 @@ public class UserController {
         return userService.getAllUsers();
     }
 
-    @PostMapping
-    public User createUser(@RequestBody CreateUserRequest request){
-        return userService.createUser(request);
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public User createUser(@RequestPart("request") CreateUserRequest request,
+                           @RequestPart(value = "file", required = false) MultipartFile file){
+        return userService.createUser(request, file);
     }
 }
