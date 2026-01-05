@@ -33,3 +33,6 @@ build/
 .vscode/
 
 docker-data/
+postgres/
+minio/
+.DS_Store
