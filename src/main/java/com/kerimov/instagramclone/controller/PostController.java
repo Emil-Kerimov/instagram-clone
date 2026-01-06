@@ -1,8 +1,11 @@
 package com.kerimov.instagramclone.controller;
 
 import com.kerimov.instagramclone.dto.PostDto;
+import com.kerimov.instagramclone.response.ApiResponse;
 import com.kerimov.instagramclone.service.post.IPostService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,8 +23,15 @@ public class PostController {
         return postService.getPosts();
     }
 
+    @GetMapping("/{postId}")
+    public ResponseEntity<ApiResponse> getPost(@PathVariable UUID postId) { // TODO: ResponseEntity
+        PostDto foundPost = postService.getPost(postId);
+        return ResponseEntity.ok(new ApiResponse("success", foundPost));
+    }
+
     @PostMapping("/{userId}")
-    public PostDto createPost(@PathVariable UUID userId, @RequestParam String content, @RequestParam List<MultipartFile> images) {
-        return postService.createPost(userId,content, images);
+    public ResponseEntity<ApiResponse> createPost(@PathVariable UUID userId, @RequestParam String content, @RequestParam List<MultipartFile> images) {
+        PostDto createdPost = postService.createPost(userId,content, images);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse("created", createdPost));
     }
 }

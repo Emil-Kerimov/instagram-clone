@@ -1,6 +1,7 @@
 package com.kerimov.instagramclone.service.user;
 
 import com.kerimov.instagramclone.dto.UserDto;
+import com.kerimov.instagramclone.exceptions.AlreadyExistsException;
 import com.kerimov.instagramclone.mapper.UserMapper;
 import com.kerimov.instagramclone.models.User;
 import com.kerimov.instagramclone.repository.UserRepository;
@@ -32,7 +33,9 @@ public class UserService implements IUserService {
     @Transactional
     @Override
     public UserDto createUser(CreateUserRequest request, MultipartFile file) {
-        if(userRepository.existsByEmail(request.getEmail())){ throw new RuntimeException("msg");}
+        if(userRepository.existsByEmail(request.getEmail())){
+            throw new AlreadyExistsException("User with email " + request.getEmail() + " already exists");
+        }
 
         String imageUrl;
         if(file.isEmpty()){

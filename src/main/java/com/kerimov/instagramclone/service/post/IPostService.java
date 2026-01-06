@@ -10,4 +10,6 @@ public interface IPostService {
     List<PostDto> getPosts();
 
     PostDto createPost(UUID userId, String content, List<MultipartFile> images);
+
+    PostDto getPost(UUID postId);
 }

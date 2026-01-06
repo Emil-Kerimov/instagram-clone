@@ -30,7 +30,7 @@ public class MinIOFileStorageService implements IMinIOFileStorageService {
     private String url;
 
     @Override
-    public String upload(MultipartFile file){
+    public String upload(MultipartFile file){  // TODO: sync id with real obj
         try {
             String fileId = UUID.randomUUID().toString();
 
