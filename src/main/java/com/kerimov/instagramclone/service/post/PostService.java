@@ -29,14 +29,14 @@ public class PostService implements IPostService {
 
     @Override
     public List<PostDto> getPosts(){
-        return postMapper.map((postRepository.findAll()));
+        return postMapper.toDtoList((postRepository.findAll()));
     }
 
     @Override
     public PostDto getPost(UUID postId) {
         Post post = postRepository.findById(postId).orElseThrow(
                 () -> new ResourceNotFoundException("There is no post with id "+ postId));
-        return postMapper.map(post);
+        return postMapper.toDto(post);
     }
 
     @Transactional
@@ -50,18 +50,39 @@ public class PostService implements IPostService {
         addImagesToPost(images, newPost);
         newPost.setUser(user);
 
-        return postMapper.map((postRepository.save(newPost)));
+        return postMapper.toDto((postRepository.save(newPost)));
     }
 
+    @Transactional
+    @Override
+    public PostDto updatePost(UUID postId, String newContent, List<MultipartFile> newImages, List<UUID> imagesToDeleteIds){
+        Post post = postRepository.findById(postId).orElseThrow(() -> new ResourceNotFoundException("There is no post with id "+ postId));
+        Optional.ofNullable(newContent).ifPresent(content -> post.setCaption(newContent));
 
-    private void addImagesToPost(List<MultipartFile> images, Post newPost) {
+        if(imagesToDeleteIds != null && !imagesToDeleteIds.isEmpty()){
+            List<PostImage> imagesToDelete = post.getImages().stream().filter(image -> imagesToDeleteIds.contains(image.getId())).toList();
+
+            for(PostImage postImage : imagesToDelete){
+                minioFileStorageService.delete(postImage.getStorageKey());
+            }
+            post.getImages().removeAll(imagesToDelete);
+        }
+
+        if(newImages != null && !newImages.isEmpty()){
+            addImagesToPost(newImages, post);
+        }
+
+        return postMapper.toDto(postRepository.save(post));
+    }
+
+    private void addImagesToPost(List<MultipartFile> images, Post post) {
         List<PostImage> postImages = new ArrayList<>();
         for (MultipartFile image : images) {
             PostImage postImage = new PostImage();
-            postImage.setUrl(minioFileStorageService.upload(image));
-            postImage.setPost(newPost);
+            postImage.setStorageKey(minioFileStorageService.upload(image));
+            postImage.setPost(post);
             postImages.add(postImage);
         }
-        newPost.setImages(postImages);
+        post.getImages().addAll(postImages);
     }
 }

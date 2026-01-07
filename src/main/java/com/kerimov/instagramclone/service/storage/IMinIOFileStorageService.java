@@ -6,4 +6,6 @@ public interface IMinIOFileStorageService {
     String upload(MultipartFile file);
 
     String getFileUrl(String fileName);
+
+    void delete(String key);
 }

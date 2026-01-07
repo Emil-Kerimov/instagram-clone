@@ -3,6 +3,7 @@ package com.kerimov.instagramclone.service.storage;
 import com.kerimov.instagramclone.exceptions.FileStorageServiceException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -10,14 +11,12 @@ import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.exception.SdkClientException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
-import software.amazon.awssdk.services.s3.model.HeadBucketRequest;
-import software.amazon.awssdk.services.s3.model.NoSuchBucketException;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 
 import java.io.IOException;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MinIOFileStorageService implements IMinIOFileStorageService {
@@ -30,7 +29,7 @@ public class MinIOFileStorageService implements IMinIOFileStorageService {
     private String url;
 
     @Override
-    public String upload(MultipartFile file){  // TODO: sync id with real obj
+    public String upload(MultipartFile file){
         try {
             String fileId = UUID.randomUUID().toString();
 
@@ -44,13 +43,29 @@ public class MinIOFileStorageService implements IMinIOFileStorageService {
             s3Client.putObject(request, RequestBody
                     .fromInputStream(file.getInputStream(), file.getSize()));
 
-            return url + "/" + bucketName + "/" + fileId;
+            return fileId;
         } catch (IOException e) {
+            log.error("Failed to upload file from server.", e);
             throw new FileStorageServiceException("loading file from server is not possible");
         } catch (Exception e) {
+            log.error("Failed to upload file to MinIO with url {}/{}. ", url, bucketName, e);
             throw new FileStorageServiceException("loading file to MinIO is not possible");
         }
 
+    }
+
+    @Override
+    public void delete(String key) {
+        try {
+            DeleteObjectRequest request = DeleteObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(key)
+                    .build();
+            s3Client.deleteObject(request);
+        } catch (Exception e) {
+            log.error("Failed to delete file with key: {} from MinIO with url {}/{}. ", key, url, bucketName, e);
+            throw new FileStorageServiceException("Cant delete file from MinIO");
+        }
     }
 
     @PostConstruct

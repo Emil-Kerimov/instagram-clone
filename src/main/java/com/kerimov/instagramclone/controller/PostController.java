@@ -24,7 +24,7 @@ public class PostController {
     }
 
     @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponse> getPost(@PathVariable UUID postId) { // TODO: ResponseEntity
+    public ResponseEntity<ApiResponse> getPost(@PathVariable UUID postId) {
         PostDto foundPost = postService.getPost(postId);
         return ResponseEntity.ok(new ApiResponse("success", foundPost));
     }
@@ -33,5 +33,11 @@ public class PostController {
     public ResponseEntity<ApiResponse> createPost(@PathVariable UUID userId, @RequestParam String content, @RequestParam List<MultipartFile> images) {
         PostDto createdPost = postService.createPost(userId,content, images);
         return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse("created", createdPost));
+    }
+
+    @PutMapping("/{postId}")
+    public ResponseEntity<ApiResponse> updatePost(@PathVariable UUID postId, @RequestParam String content, @RequestParam List<MultipartFile> images, @RequestParam List<UUID> imagesToDeleteIds) {
+        PostDto updatedPost = postService.updatePost(postId,content, images, imagesToDeleteIds);
+        return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse("updated", updatedPost));
     }
 }

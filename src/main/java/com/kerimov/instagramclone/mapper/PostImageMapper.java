@@ -1,7 +1,8 @@
 package com.kerimov.instagramclone.mapper;
 
-import com.kerimov.instagramclone.dto.UserDto;
-import com.kerimov.instagramclone.models.User;
+import com.kerimov.instagramclone.dto.PostImageDto;
+import com.kerimov.instagramclone.models.Post;
+import com.kerimov.instagramclone.models.PostImage;
 import org.mapstruct.Mapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -9,28 +10,26 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.List;
 
 @Mapper(componentModel = "spring")
-public abstract class UserMapper {
+public abstract class PostImageMapper {
     @Value("${minio.bucket.name}")
     private String bucketName;
 
     @Value("${minio.external.url}")
     private String url;
 
-    public abstract List<UserDto> toDtoList(List<User> users);
-    public UserDto toDto(User user){
-
-        if(user == null){
+    public PostImageDto toDto(PostImage image){
+        if(image == null){
             return null;
         }
 
-        UserDto userDto = new UserDto();
-        userDto.setId(user.getId());
-        userDto.setUsername(user.getUsername());
+        PostImageDto postImageDto = new PostImageDto();
+        postImageDto.setId(image.getId());
         String fullUrl = UriComponentsBuilder.fromUriString(url)
                 .pathSegment(bucketName)
-                .pathSegment(user.getAvatarKey())
+                .pathSegment(image.getStorageKey())
                 .build().toUriString();
-        userDto.setAvatarKey(fullUrl);
-        return userDto;
+        postImageDto.setUrl(fullUrl);
+        return postImageDto;
     }
+    public abstract List<PostImageDto> toDtoList(List<PostImage> images);
 }

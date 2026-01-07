@@ -17,7 +17,7 @@ public class PostImage {
     private UUID id;
 
     @Column(nullable = false)
-    private String url;
+    private String storageKey;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)

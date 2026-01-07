@@ -27,7 +27,7 @@ public class UserService implements IUserService {
 
     @Override
     public List<UserDto> getAllUsers() {
-        return userMapper.map(userRepository.findAll());
+        return userMapper.toDtoList(userRepository.findAll());
     }
 
     @Transactional
@@ -37,20 +37,20 @@ public class UserService implements IUserService {
             throw new AlreadyExistsException("User with email " + request.getEmail() + " already exists");
         }
 
-        String imageUrl;
-        if(file.isEmpty()){
-            imageUrl = minioFileStorageService.getFileUrl(defaultAvatar);
+        String avatarKey;
+        if(file == null){
+            avatarKey = defaultAvatar;
         } else {
-            imageUrl = minioFileStorageService.upload(file);
+            avatarKey = minioFileStorageService.upload(file);
         }
 
             User createdUser =  userRepository.save(User.builder()
                 .username(request.getUsername())
                 .bio(request.getBio())
                 .email(request.getEmail())
-                .imageUrl(imageUrl)
+                .avatarKey(avatarKey)
                 .password(request.getPassword())
                 .build());
-        return userMapper.map(createdUser);
+        return userMapper.toDto(createdUser);
     }
 }
