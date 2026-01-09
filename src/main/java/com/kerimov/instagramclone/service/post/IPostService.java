@@ -16,4 +16,6 @@ public interface IPostService {
 
     @Transactional
     PostDto updatePost(UUID postId, String newContent, List<MultipartFile> newImages, List<UUID> imagesToDeleteIds);
+
+    void deletePostById(UUID postId);
 }

@@ -62,9 +62,7 @@ public class PostService implements IPostService {
         if(imagesToDeleteIds != null && !imagesToDeleteIds.isEmpty()){
             List<PostImage> imagesToDelete = post.getImages().stream().filter(image -> imagesToDeleteIds.contains(image.getId())).toList();
 
-            for(PostImage postImage : imagesToDelete){
-                minioFileStorageService.delete(postImage.getStorageKey());
-            }
+            deletePostImagesFromStorage(imagesToDelete);
             post.getImages().removeAll(imagesToDelete);
         }
 
@@ -73,6 +71,22 @@ public class PostService implements IPostService {
         }
 
         return postMapper.toDto(postRepository.save(post));
+    }
+
+    @Transactional
+    @Override
+    public void deletePostById(UUID postId) {   // TODO: clean trash and defence in CUD operation to rollback fileStorage action
+        Post post = postRepository.findById(postId).orElseThrow(() -> new ResourceNotFoundException("There is no post with id "+ postId));
+        List<PostImage> postImagesToDelete = post.getImages();
+        postRepository.delete(post);
+        deletePostImagesFromStorage(postImagesToDelete);
+
+    }
+    private void deletePostImagesFromStorage(List<PostImage> imagesToDelete) {
+        if(imagesToDelete == null){ return;}
+        for(PostImage postImage : imagesToDelete){
+            minioFileStorageService.delete(postImage.getStorageKey());
+        }
     }
 
     private void addImagesToPost(List<MultipartFile> images, Post post) {

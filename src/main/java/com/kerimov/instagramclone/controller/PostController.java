@@ -40,4 +40,10 @@ public class PostController {
         PostDto updatedPost = postService.updatePost(postId,content, images, imagesToDeleteIds);
         return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse("updated", updatedPost));
     }
+
+    @DeleteMapping("/{postId}")
+    public ResponseEntity<ApiResponse> deletePost(@PathVariable UUID postId) {
+        postService.deletePostById(postId);
+        return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse("deleted", null));
+    }
 }

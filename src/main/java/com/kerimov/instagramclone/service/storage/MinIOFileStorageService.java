@@ -86,6 +86,20 @@ public class MinIOFileStorageService implements IMinIOFileStorageService {
                         .build();
 
                 s3Client.createBucket(createBucketRequest);
+                String policy = String.format("""
+                {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                     "Effect": "Allow",
+                     "Principal": "*",
+                      "Action": "s3:GetObject",
+                     "Resource": "arn:aws:s3:::%s/*"
+                    }
+                ]
+             }
+                """, bucketName);
+                s3Client.putBucketPolicy(PutBucketPolicyRequest.builder().bucket(bucketName).policy(policy).build());
             } catch (Exception ex) {
                 throw new FileStorageServiceException("Cannot create bucket");
             }
