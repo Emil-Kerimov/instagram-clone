@@ -10,6 +10,7 @@ import com.kerimov.instagramclone.repository.PostRepository;
 import com.kerimov.instagramclone.repository.UserRepository;
 import com.kerimov.instagramclone.service.storage.IMinIOFileStorageService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 public class PostService implements IPostService {
@@ -59,15 +61,24 @@ public class PostService implements IPostService {
         Post post = postRepository.findById(postId).orElseThrow(() -> new ResourceNotFoundException("There is no post with id "+ postId));
         Optional.ofNullable(newContent).ifPresent(content -> post.setCaption(newContent));
 
-        if(imagesToDeleteIds != null && !imagesToDeleteIds.isEmpty()){
-            List<PostImage> imagesToDelete = post.getImages().stream().filter(image -> imagesToDeleteIds.contains(image.getId())).toList();
+        List<String> ids = imagesToDeleteIds.stream().map(UUID::toString).toList();
+        if(ids != null && !ids.isEmpty()){
+            List<PostImage> imagesToDelete = post.getImages().stream().filter(image -> ids.contains(image.getId().toString())).toList();
 
             deletePostImagesFromStorage(imagesToDelete);
             post.getImages().removeAll(imagesToDelete);
+            log.debug("deleted post images from storage. {}",  imagesToDelete);
+            log.debug("post images after image deleting from storage {}",  post.getImages());
         }
 
         if(newImages != null && !newImages.isEmpty()){
-            addImagesToPost(newImages, post);
+            List<MultipartFile> validImages = newImages.stream()
+                    .filter((image) -> !image.isEmpty() && image.getSize() > 0)
+                    .toList();
+            if (!validImages.isEmpty()) {
+                addImagesToPost(validImages, post);
+                log.debug("added {}",  validImages);
+            }
         }
 
         return postMapper.toDto(postRepository.save(post));

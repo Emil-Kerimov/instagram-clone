@@ -2,6 +2,7 @@ package com.kerimov.instagramclone.service.user;
 
 import com.kerimov.instagramclone.dto.UserDto;
 import com.kerimov.instagramclone.exceptions.AlreadyExistsException;
+import com.kerimov.instagramclone.exceptions.ResourceNotFoundException;
 import com.kerimov.instagramclone.mapper.UserMapper;
 import com.kerimov.instagramclone.models.User;
 import com.kerimov.instagramclone.repository.UserRepository;
@@ -14,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @Service
@@ -28,6 +31,13 @@ public class UserService implements IUserService {
     @Override
     public List<UserDto> getAllUsers() {
         return userMapper.toDtoList(userRepository.findAll());
+    }
+
+    @Override
+    public UserDto getUserById(UUID userId) {
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new ResourceNotFoundException("User with id: "+ userId + " not found"));
+        return userMapper.toDto(user);
     }
 
     @Transactional
