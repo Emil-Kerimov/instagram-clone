@@ -6,6 +6,7 @@ import com.kerimov.instagramclone.request.UpdateUserRequest;
 import com.kerimov.instagramclone.response.ApiResponse;
 import com.kerimov.instagramclone.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,9 +34,10 @@ public class UserController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public UserDto createUser(@RequestPart("request") CreateUserRequest request,
+    public ResponseEntity<ApiResponse> createUser(@RequestPart("request") CreateUserRequest request,
                            @RequestPart(value = "file", required = false) MultipartFile file){
-        return userService.createUser(request, file);
+        UserDto createdUser =  userService.createUser(request, file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse("user created successful", createdUser));
     }
 
     @PatchMapping(path = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
