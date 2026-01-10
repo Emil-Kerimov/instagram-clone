@@ -7,6 +7,7 @@ import com.kerimov.instagramclone.mapper.UserMapper;
 import com.kerimov.instagramclone.models.User;
 import com.kerimov.instagramclone.repository.UserRepository;
 import com.kerimov.instagramclone.request.CreateUserRequest;
+import com.kerimov.instagramclone.request.UpdateUserRequest;
 import com.kerimov.instagramclone.service.storage.IMinIOFileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -62,5 +63,34 @@ public class UserService implements IUserService {
                 .password(request.getPassword())
                 .build());
         return userMapper.toDto(createdUser);
+    }
+
+    @Transactional
+    @Override
+    public UserDto updateUser(UUID userId, UpdateUserRequest request, MultipartFile newAvatar) {
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new ResourceNotFoundException("User with id: "+ userId + " not found"));
+
+        if(newAvatar != null &&  !newAvatar.isEmpty()){
+            String oldKey = user.getAvatarKey();
+            user.setAvatarKey(minioFileStorageService.upload(newAvatar));
+            if(!oldKey.equals(defaultAvatar)){
+                minioFileStorageService.delete(oldKey);
+            }
+        }
+
+        if(request != null){
+            userMapper.updateUserFromRequest(request,user);
+        }
+        return userMapper.toDto(userRepository.save(user));
+    }
+
+    @Override
+    public void deleteUserById(UUID userId) {
+        User user = userRepository.findById(userId).orElseThrow(
+                () -> new ResourceNotFoundException("User with id: "+ userId + " not found"));
+        String keyToDelete = user.getAvatarKey();
+        userRepository.delete(user);
+        minioFileStorageService.delete(keyToDelete);
     }
 }

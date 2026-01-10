@@ -1,8 +1,8 @@
 package com.kerimov.instagramclone.controller;
 
 import com.kerimov.instagramclone.dto.UserDto;
-import com.kerimov.instagramclone.models.User;
 import com.kerimov.instagramclone.request.CreateUserRequest;
+import com.kerimov.instagramclone.request.UpdateUserRequest;
 import com.kerimov.instagramclone.response.ApiResponse;
 import com.kerimov.instagramclone.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.awt.*;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,5 +36,18 @@ public class UserController {
     public UserDto createUser(@RequestPart("request") CreateUserRequest request,
                            @RequestPart(value = "file", required = false) MultipartFile file){
         return userService.createUser(request, file);
+    }
+
+    @PatchMapping(path = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse> patchUpdateUser(@PathVariable UUID userId, @RequestPart("request") UpdateUserRequest request,
+                              @RequestPart(value = "file", required = false) MultipartFile newAvatar){
+        UserDto updatedUser = userService.updateUser(userId, request, newAvatar);
+        return ResponseEntity.ok(new ApiResponse("user updated successful", updatedUser));
+    }
+
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<ApiResponse> deleteUserById(@PathVariable UUID userId){
+        userService.deleteUserById(userId);
+        return ResponseEntity.ok(new ApiResponse("deleted successful", null));
     }
 }
