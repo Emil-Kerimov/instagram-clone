@@ -19,31 +19,32 @@ public class PostController {
     private final IPostService postService;
 
     @GetMapping
-    public List<PostDto> getPosts() {
-        return postService.getPosts();
+    public ResponseEntity<ApiResponse<List<PostDto>>> getPosts() {
+        List<PostDto> posts = postService.getPosts();
+        return ResponseEntity.ok(new ApiResponse<>("success", posts));
     }
 
     @GetMapping("/{postId}")
-    public ResponseEntity<ApiResponse> getPost(@PathVariable UUID postId) {
+    public ResponseEntity<ApiResponse<PostDto>> getPost(@PathVariable UUID postId) {
         PostDto foundPost = postService.getPost(postId);
-        return ResponseEntity.ok(new ApiResponse("success", foundPost));
+        return ResponseEntity.ok(new ApiResponse<>("success", foundPost));
     }
 
     @PostMapping("/{userId}")
-    public ResponseEntity<ApiResponse> createPost(@PathVariable UUID userId, @RequestParam String content, @RequestParam List<MultipartFile> images) {
+    public ResponseEntity<ApiResponse<PostDto>> createPost(@PathVariable UUID userId, @RequestParam String content, @RequestParam List<MultipartFile> images) {
         PostDto createdPost = postService.createPost(userId,content, images);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse("created", createdPost));
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>("created", createdPost));
     }
 
     @PutMapping("/{postId}")
-    public ResponseEntity<ApiResponse> updatePost(@PathVariable UUID postId, @RequestParam String content, @RequestParam List<MultipartFile> images, @RequestParam List<UUID> imagesToDeleteIds) {
+    public ResponseEntity<ApiResponse<PostDto>> updatePost(@PathVariable UUID postId, @RequestParam String content, @RequestParam List<MultipartFile> images, @RequestParam List<UUID> imagesToDeleteIds) {
         PostDto updatedPost = postService.updatePost(postId,content, images, imagesToDeleteIds);
-        return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse("updated", updatedPost));
+        return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse<>("updated", updatedPost));
     }
 
     @DeleteMapping("/{postId}")
-    public ResponseEntity<ApiResponse> deletePost(@PathVariable UUID postId) {
+    public ResponseEntity<ApiResponse<Void>> deletePost(@PathVariable UUID postId) {
         postService.deletePostById(postId);
-        return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse("deleted", null));
+        return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse<>("deleted", null));
     }
 }

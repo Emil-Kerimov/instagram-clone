@@ -22,34 +22,34 @@ public class UserController {
     private final IUserService userService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse> getAllUsers(){
+    public ResponseEntity<ApiResponse<List<UserDto>>> getAllUsers(){
         List<UserDto> users = userService.getAllUsers();
-        return ResponseEntity.ok(new ApiResponse("Successful", users));
+        return ResponseEntity.ok(new ApiResponse<>("Successful", users));
     }
 
     @GetMapping("/{userId}")
-    public ResponseEntity<ApiResponse> getUserById(@PathVariable UUID userId){
+    public ResponseEntity<ApiResponse<UserDto>> getUserById(@PathVariable UUID userId){
         UserDto user = userService.getUserById(userId);
-        return ResponseEntity.ok(new ApiResponse("Found successful", user));
+        return ResponseEntity.ok(new ApiResponse<>("Found successful", user));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse> createUser(@RequestPart("request") CreateUserRequest request,
+    public ResponseEntity<ApiResponse<UserDto>> createUser(@RequestPart("request") CreateUserRequest request,
                            @RequestPart(value = "file", required = false) MultipartFile file){
         UserDto createdUser =  userService.createUser(request, file);
-        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse("user created successful", createdUser));
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>("user created successful", createdUser));
     }
 
     @PatchMapping(path = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse> patchUpdateUser(@PathVariable UUID userId, @RequestPart("request") UpdateUserRequest request,
+    public ResponseEntity<ApiResponse<UserDto>> patchUpdateUser(@PathVariable UUID userId, @RequestPart("request") UpdateUserRequest request,
                               @RequestPart(value = "file", required = false) MultipartFile newAvatar){
         UserDto updatedUser = userService.updateUser(userId, request, newAvatar);
-        return ResponseEntity.ok(new ApiResponse("user updated successful", updatedUser));
+        return ResponseEntity.ok(new ApiResponse<>("user updated successful", updatedUser));
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<ApiResponse> deleteUserById(@PathVariable UUID userId){
+    public ResponseEntity<ApiResponse<UserDto>> deleteUserById(@PathVariable UUID userId){
         userService.deleteUserById(userId);
-        return ResponseEntity.ok(new ApiResponse("deleted successful", null));
+        return ResponseEntity.ok(new ApiResponse<>("deleted successful", null));
     }
 }
