@@ -80,7 +80,6 @@ public class PostService implements IPostService {
                 log.debug("added {}",  validImages);
             }
         }
-
         return postMapper.toDto(postRepository.save(post));
     }
 
@@ -91,8 +90,8 @@ public class PostService implements IPostService {
         List<PostImage> postImagesToDelete = post.getImages();
         postRepository.delete(post);
         deletePostImagesFromStorage(postImagesToDelete);
-
     }
+
     private void deletePostImagesFromStorage(List<PostImage> imagesToDelete) {
         if(imagesToDelete == null){ return;}
         for(PostImage postImage : imagesToDelete){
