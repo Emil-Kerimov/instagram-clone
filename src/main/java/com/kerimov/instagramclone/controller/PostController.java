@@ -36,7 +36,7 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>("created", createdPost));
     }
 
-    @PutMapping("/{postId}")
+    @PatchMapping("/{postId}")
     public ResponseEntity<ApiResponse<PostDto>> updatePost(@PathVariable UUID postId, @RequestParam String content, @RequestParam List<MultipartFile> images, @RequestParam List<UUID> imagesToDeleteIds) {
         PostDto updatedPost = postService.updatePost(postId,content, images, imagesToDeleteIds);
         return ResponseEntity.status(HttpStatus.OK).body(new ApiResponse<>("updated", updatedPost));

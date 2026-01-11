@@ -16,7 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 @RequiredArgsConstructor
@@ -70,6 +69,9 @@ public class UserService implements IUserService {
     public UserDto updateUser(UUID userId, UpdateUserRequest request, MultipartFile newAvatar) {
         User user = userRepository.findById(userId).orElseThrow(
                 () -> new ResourceNotFoundException("User with id: "+ userId + " not found"));
+        if(userRepository.existsByUsername(request.getUsername())) {
+            throw new AlreadyExistsException("User with name " + request.getUsername() + " already exists");
+        }
 
         if(newAvatar != null &&  !newAvatar.isEmpty()){
             String oldKey = user.getAvatarKey();
