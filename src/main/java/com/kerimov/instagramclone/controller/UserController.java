@@ -1,16 +1,19 @@
 package com.kerimov.instagramclone.controller;
 
 import com.kerimov.instagramclone.dto.UserDto;
-import com.kerimov.instagramclone.models.User;
 import com.kerimov.instagramclone.request.CreateUserRequest;
+import com.kerimov.instagramclone.request.UpdateUserRequest;
+import com.kerimov.instagramclone.response.ApiResponse;
 import com.kerimov.instagramclone.service.user.IUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.awt.*;
 import java.util.List;
+import java.util.UUID;
 
 @RequiredArgsConstructor
 @RestController
@@ -19,13 +22,34 @@ public class UserController {
     private final IUserService userService;
 
     @GetMapping
-    public List<UserDto> getAllUsers(){
-        return userService.getAllUsers();
+    public ResponseEntity<ApiResponse<List<UserDto>>> getAllUsers(){
+        List<UserDto> users = userService.getAllUsers();
+        return ResponseEntity.ok(new ApiResponse<>("Successful", users));
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<ApiResponse<UserDto>> getUserById(@PathVariable UUID userId){
+        UserDto user = userService.getUserById(userId);
+        return ResponseEntity.ok(new ApiResponse<>("Found successful", user));
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public UserDto createUser(@RequestPart("request") CreateUserRequest request,
+    public ResponseEntity<ApiResponse<UserDto>> createUser(@RequestPart("request") CreateUserRequest request,
                            @RequestPart(value = "file", required = false) MultipartFile file){
-        return userService.createUser(request, file);
+        UserDto createdUser =  userService.createUser(request, file);
+        return ResponseEntity.status(HttpStatus.CREATED).body(new ApiResponse<>("user created successful", createdUser));
+    }
+
+    @PatchMapping(path = "/{userId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<UserDto>> patchUpdateUser(@PathVariable UUID userId, @RequestPart("request") UpdateUserRequest request,
+                              @RequestPart(value = "file", required = false) MultipartFile newAvatar){
+        UserDto updatedUser = userService.updateUser(userId, request, newAvatar);
+        return ResponseEntity.ok(new ApiResponse<>("user updated successful", updatedUser));
+    }
+
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<ApiResponse<UserDto>> deleteUserById(@PathVariable UUID userId){
+        userService.deleteUserById(userId);
+        return ResponseEntity.ok(new ApiResponse<>("deleted successful", null));
     }
 }

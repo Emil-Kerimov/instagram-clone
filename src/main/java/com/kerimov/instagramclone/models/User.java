@@ -33,7 +33,7 @@ public class User {
     @Column(columnDefinition = "text")
     private String bio;
 
-    private String imageUrl;
+    private String avatarKey;
 
     @CreationTimestamp
     @Column(updatable = false)
