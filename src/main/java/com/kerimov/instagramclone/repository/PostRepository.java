@@ -11,7 +11,7 @@ import java.util.UUID;
 public interface PostRepository extends JpaRepository<Post, UUID> {
 
     @Override
-    @EntityGraph(attributePaths = {"user", "images"}) // TODO: Benchmark
+    @EntityGraph(attributePaths = {"user", "images"})
     List<Post> findAll();
 
     @Override
