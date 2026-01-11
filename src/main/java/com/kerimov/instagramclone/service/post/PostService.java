@@ -1,6 +1,7 @@
 package com.kerimov.instagramclone.service.post;
 
 import com.kerimov.instagramclone.dto.PostDto;
+import com.kerimov.instagramclone.exceptions.FileStorageServiceException;
 import com.kerimov.instagramclone.exceptions.ResourceNotFoundException;
 import com.kerimov.instagramclone.mapper.PostMapper;
 import com.kerimov.instagramclone.models.Post;
@@ -13,6 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
@@ -64,8 +67,9 @@ public class PostService implements IPostService {
         List<String> ids = imagesToDeleteIds.stream().map(UUID::toString).toList();
         if(ids != null && !ids.isEmpty()){
             List<PostImage> imagesToDelete = post.getImages().stream().filter(image -> ids.contains(image.getId().toString())).toList();
+            List<String> keysToDelete = imagesToDelete.stream().map(PostImage::getStorageKey).toList();
 
-            deletePostImagesFromStorage(imagesToDelete);
+            deletePostImagesFromStorage(keysToDelete);
             post.getImages().removeAll(imagesToDelete);
             log.debug("deleted post images from storage. {}",  imagesToDelete);
             log.debug("post images after image deleting from storage {}",  post.getImages());
@@ -85,17 +89,35 @@ public class PostService implements IPostService {
 
     @Transactional
     @Override
-    public void deletePostById(UUID postId) {   // TODO: clean trash and defence in CUD operation to rollback fileStorage action
+    public void deletePostById(UUID postId) {   // TODO: clean trash
         Post post = postRepository.findById(postId).orElseThrow(() -> new ResourceNotFoundException("There is no post with id "+ postId));
         List<PostImage> postImagesToDelete = post.getImages();
+        List<String> keysToDelete = postImagesToDelete.stream().map(PostImage::getStorageKey).toList();
         postRepository.delete(post);
-        deletePostImagesFromStorage(postImagesToDelete);
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                deletePostImagesFromStorage(keysToDelete);
+            }
+
+        });
     }
 
-    private void deletePostImagesFromStorage(List<PostImage> imagesToDelete) {
-        if(imagesToDelete == null){ return;}
-        for(PostImage postImage : imagesToDelete){
-            minioFileStorageService.delete(postImage.getStorageKey());
+//    private void deletePostImagesFromStorage(List<PostImage> imagesToDelete) {
+//        if(imagesToDelete == null){ return;}
+//        for(PostImage postImage : imagesToDelete){
+//            minioFileStorageService.delete(postImage.getStorageKey());
+//        }
+//    }
+
+    private void deletePostImagesFromStorage(List<String> keysToDelete) {
+        if(keysToDelete == null){ return;}
+        for(String key : keysToDelete){
+            try {
+                minioFileStorageService.delete(key);
+            } catch (FileStorageServiceException e) {
+                log.error("Exception occurs while trying to delete file with key: {}. ", key, e);
+            }
         }
     }
 
