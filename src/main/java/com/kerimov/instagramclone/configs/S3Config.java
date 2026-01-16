@@ -23,12 +23,15 @@ public class S3Config {
     @Value("${minio.secret-key}")
     private String secretKey;
 
+    @Value("${minio.region}")
+    private String region;
+
     @Bean
     public S3Client  s3Client() {
         return S3Client.builder()
                 .endpointOverride(URI.create(url))
                 .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey,secretKey)))
-                .region(Region.US_EAST_1)
+                .region(Region.of(region))
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
                 .build();
     }
