@@ -1,6 +1,5 @@
 package com.kerimov.instagramclone.exceptions;
 
-import com.kerimov.instagramclone.response.ErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
