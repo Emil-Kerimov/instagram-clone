@@ -56,6 +56,7 @@ public class MinIOFileStorageService implements IMinIOFileStorageService {
 
     @Override
     public void delete(String key) {
+        if(key == null) return;
         try {
             DeleteObjectRequest request = DeleteObjectRequest.builder()
                     .bucket(bucketName)
