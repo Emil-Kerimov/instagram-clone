@@ -191,7 +191,7 @@ class PostServiceTest {
     @DisplayName("Create Post Tests")
     class CreatePostTests{
         @Test
-        @DisplayName("If all requirements are satisfied then should correctly create post and return dtp")
+        @DisplayName("If all requirements are satisfied then should correctly create post and return dto")
         void createPostHappyPath(){
             when(userRepository.findById(existingUserId)).thenReturn(Optional.of(mockUser));
             when(minioFileStorageService.upload(any(MultipartFile.class))).thenReturn("savedKey");
@@ -241,9 +241,6 @@ class PostServiceTest {
         @DisplayName("If uploads fails midway then should throw exception with correct msg and clean up trash(storage rollback)")
         void createPostShouldThrowExceptionAndCleanUpIfCantUploadToStorage(){
             when(userRepository.findById(existingUserId)).thenReturn(Optional.of(mockUser));
-            //MultipartFile file1 = mock(MultipartFile.class);
-            //MultipartFile file2 = mock(MultipartFile.class);
-            //List<MultipartFile> files =  List.of(file1, file2);
             when(minioFileStorageService.upload(any(MultipartFile.class)))
                     .thenReturn("savedKey-1")
                     .thenThrow(new FileStorageServiceException("loading file to MinIO is not possible"));
@@ -259,6 +256,26 @@ class PostServiceTest {
             verify(minioFileStorageService, times(1)).delete("savedKey-1");
 
             verifyNoInteractions(postRepository);
+            verifyNoInteractions(postMapper);
+        }
+
+        @Test
+        @DisplayName("If saving to DB fails then should throw exception and clean up trash(storage rollback)")
+        void createPostShouldThrowExceptionAndCleanUpIfCantSaveToDb(){
+            when(userRepository.findById(existingUserId)).thenReturn(Optional.of(mockUser));
+            when(minioFileStorageService.upload(any(MultipartFile.class)))
+                    .thenReturn("savedKey-1")
+                    .thenReturn("savedKey-2");
+            when(postRepository.save(any(Post.class))).thenThrow(new RuntimeException());
+
+            RuntimeException exception = assertThrows(RuntimeException.class,
+                    () -> {postService.createPost(existingUserId, mockContent, mockCorrectMultipartFiles);
+                    });
+            assertNotNull(exception);
+            verify(userRepository, times(1)).findById(existingUserId);
+            verify(minioFileStorageService, times(2)).upload(any(MultipartFile.class));
+            verify(minioFileStorageService, times(1)).delete("savedKey-1");
+            verify(minioFileStorageService, times(1)).delete("savedKey-2");
             verifyNoInteractions(postMapper);
         }
 
