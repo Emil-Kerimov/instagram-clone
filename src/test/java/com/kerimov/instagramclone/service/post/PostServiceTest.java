@@ -1,11 +1,13 @@
 package com.kerimov.instagramclone.service.post;
 
 import com.kerimov.instagramclone.dto.PostDto;
+import com.kerimov.instagramclone.dto.PostImageDto;
 import com.kerimov.instagramclone.dto.UserDto;
 import com.kerimov.instagramclone.exceptions.FileStorageServiceException;
 import com.kerimov.instagramclone.exceptions.ResourceNotFoundException;
 import com.kerimov.instagramclone.mapper.PostMapper;
 import com.kerimov.instagramclone.models.Post;
+import com.kerimov.instagramclone.models.PostImage;
 import com.kerimov.instagramclone.models.User;
 import com.kerimov.instagramclone.repository.PostRepository;
 import com.kerimov.instagramclone.repository.UserRepository;
@@ -15,12 +17,16 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.transaction.support.SimpleTransactionStatus;
+import org.springframework.transaction.support.TransactionCallback;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.io.IOException;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -48,6 +54,10 @@ class PostServiceTest {
     private UUID existingUserId;
     private UUID nonExistingPostId;
     private UUID nonExistingUserId;
+
+    private String bucketName = "images";
+
+    private String url = "http://localhost:9000";
 
     private String mockContent = "Hello world! this is a new post content!";
 
@@ -88,6 +98,32 @@ class PostServiceTest {
         mockUser.setId(existingUserId);
         mockUserDto = new UserDto();
         mockUserDto.setId(existingUserId);
+
+        PostImage postImageOneMock = new PostImage(); //Builder
+        postImageOneMock.setId(UUID.randomUUID());
+        postImageOneMock.setStorageKey("Key1");
+        postImageOneMock.setPost(mockPost);
+        PostImage postImageSecondMock = new PostImage();
+        postImageSecondMock.setId(UUID.randomUUID());
+        postImageSecondMock.setStorageKey("Key2");
+        postImageSecondMock.setPost(mockPost);
+
+
+
+        mockPost.setImages(new ArrayList<>(List.of(postImageOneMock,postImageSecondMock)));
+        PostImageDto imageDtoOneMock = new PostImageDto();
+        imageDtoOneMock.setId(UUID.randomUUID());
+        imageDtoOneMock.setUrl(getFullUrl(postImageOneMock.getStorageKey()));
+        PostImageDto imageDtoSecondMock = new PostImageDto();
+        imageDtoSecondMock.setId(UUID.randomUUID());
+        imageDtoSecondMock.setUrl(getFullUrl(postImageSecondMock.getStorageKey()));
+        mockPostDto.setImages(List.of(imageDtoOneMock,imageDtoSecondMock));
+    }
+    String getFullUrl(String key){
+        return UriComponentsBuilder.fromUriString(url)
+                .pathSegment(bucketName)
+                .pathSegment(key)
+                .build().toUriString();
     }
 
     @Nested
@@ -278,6 +314,57 @@ class PostServiceTest {
             verify(minioFileStorageService, times(1)).delete("savedKey-2");
             verifyNoInteractions(postMapper);
         }
+    }
 
+    @Nested
+    @DisplayName("Update Post Tests")
+    class UpdatePostTests {
+        @Test
+        @DisplayName("If all requirements are satisfied then should correctly update post and return dto")
+        void updatePostHappyPathTest(){
+            when(postRepository.existsById(existingPostId)).thenReturn(true);
+            when(minioFileStorageService.upload(any(MultipartFile.class))).thenReturn("savedKey");
+            when(postRepository.findById(existingPostId)).thenReturn(Optional.of(mockPost));
+
+            when(postRepository.save(any(Post.class))).thenReturn(mockPost);
+            when(postMapper.toDto(any(Post.class))).thenAnswer(invocationOnMock -> {
+                Post post =  invocationOnMock.getArgument(0);
+                mockPostDto.setCaption(post.getCaption());
+                mockPostDto.setId(post.getId());
+                List<PostImageDto> images = new ArrayList<>();
+                for(PostImage image : post.getImages()){
+                    PostImageDto imageDto = new PostImageDto();
+                    imageDto.setId(image.getId());
+                    imageDto.setUrl(getFullUrl(image.getStorageKey()));
+                    images.add(imageDto);
+                }
+                mockPostDto.setImages(images);
+                return mockPostDto;
+            });
+            when(transactionTemplate.execute(any())).thenAnswer(invocationOnMock -> {
+                TransactionSynchronizationManager.initSynchronization();
+
+                try {
+                    TransactionCallback callback = invocationOnMock.getArgument(0);
+                    return callback.doInTransaction(new SimpleTransactionStatus());
+                } finally {
+                    TransactionSynchronizationManager.clearSynchronization();
+                }
+            });
+
+            UUID idToDelete = mockPost.getImages().getFirst().getId();
+            PostDto res = postService.updatePost(existingPostId, mockContent, mockCorrectMultipartFiles, List.of(idToDelete));
+
+            assertNotNull(res);
+            assertEquals(existingPostId, res.getId());
+            assertEquals(res.getCaption(), mockContent);
+            assertEquals(3, res.getImages().size());
+
+            verify(postRepository, times(1)).findById(existingPostId);
+            verify(postRepository, times(1)).existsById(existingPostId);
+            verify(minioFileStorageService, times(2)).upload(mockCorrectMultipartFile);
+            verify(postRepository, times(1)).save(any(Post.class));
+            verify(postMapper,times(1)).toDto(any(Post.class));
+        }
     }
 }
