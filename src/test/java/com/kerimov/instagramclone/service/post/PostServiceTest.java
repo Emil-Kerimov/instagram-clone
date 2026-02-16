@@ -12,6 +12,7 @@ import com.kerimov.instagramclone.models.User;
 import com.kerimov.instagramclone.repository.PostRepository;
 import com.kerimov.instagramclone.repository.UserRepository;
 import com.kerimov.instagramclone.service.storage.IMinIOFileStorageService;
+import com.kerimov.instagramclone.util.TestDataFactory;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,6 +31,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
 
@@ -131,22 +133,25 @@ class PostServiceTest {
     class GetPostByIdTests {
 
         @Test
-        @DisplayName("if Post exists then should return PostDto")
+        @DisplayName("if Post exists then should return its PostDto")
         void getPostShouldReturnPostDtoWhenPostExists(){
             // Arrange
-            when(postRepository.findById(existingPostId)).thenReturn(Optional.of(mockPost));
-            when(postMapper.toDto(mockPost)).thenReturn(mockPostDto);
+            Post defaultPost = TestDataFactory.createDefaultPost();
+            UUID defaultPostId = defaultPost.getId();
+            PostDto defaultPostDto = TestDataFactory.createDefaultPostDto(defaultPostId, defaultPost.getCaption());
+            given(postRepository.findById(defaultPostId)).willReturn(Optional.of(defaultPost));
+            given(postMapper.toDto(defaultPost)).willReturn(defaultPostDto);
 
             // Act
-            PostDto result = postService.getPost(existingPostId);
+            PostDto result = postService.getPost(defaultPostId);
 
             //Assert
             assertNotNull(result);
-            assertEquals(result.getId(), existingPostId);
-            assertEquals(result.getCaption(), mockPost.getCaption());
+            assertEquals(result.getId(), defaultPostId);
+            assertEquals(result.getCaption(), defaultPost.getCaption());
 
-            verify(postRepository, times(1)).findById(existingPostId);
-            verify(postMapper, times(1)).toDto(mockPost);
+            verify(postRepository, times(1)).findById(defaultPostId);
+            verify(postMapper, times(1)).toDto(defaultPost);
         }
 
         @Test
@@ -366,5 +371,7 @@ class PostServiceTest {
             verify(postRepository, times(1)).save(any(Post.class));
             verify(postMapper,times(1)).toDto(any(Post.class));
         }
+
+
     }
 }
