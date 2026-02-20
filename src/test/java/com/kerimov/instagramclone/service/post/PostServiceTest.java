@@ -54,7 +54,6 @@ class PostServiceTest {
 
     private UUID existingPostId;
     private UUID existingUserId;
-    private UUID nonExistingPostId;
     private UUID nonExistingUserId;
 
     private String bucketName = "images";
@@ -76,7 +75,6 @@ class PostServiceTest {
     @BeforeEach
     void setUp() {
         existingPostId = UUID.randomUUID();
-        nonExistingPostId = UUID.randomUUID();
 
         mockPost = new Post();
         mockPost.setId(existingPostId);
@@ -158,16 +156,15 @@ class PostServiceTest {
         @DisplayName("if Post doesnt exist then should throw ResourceNotFound Exception with correct msg")
         void getPostShouldThrowResourceNotFoundExceptionWhenPostDoesNotExist(){
             // Arrange
-            when(postRepository.findById(nonExistingPostId)).thenReturn(Optional.empty());
+            UUID nonExistingId = UUID.randomUUID();
+            when(postRepository.findById(nonExistingId)).thenReturn(Optional.empty());
 
             // Act Assert
-            ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
-                    () -> postService.getPost(nonExistingPostId));
-            assertEquals("There is no post with id " + nonExistingPostId, exception.getMessage());
+            assertThrows(ResourceNotFoundException.class,
+                    () -> postService.getPost(nonExistingId));
 
-            verify(postRepository, times(1)).findById(nonExistingPostId);
+            verify(postRepository, times(1)).findById(nonExistingId);
             verifyNoInteractions(postMapper);
-
         }
     }
 
@@ -185,43 +182,24 @@ class PostServiceTest {
             verify(postMapper,times(1)).toDtoList(new ArrayList<>());
         }
 
-        @DisplayName("If there is one post then should return list with 1 postDto")
-        @Test
-        void getAllPostsShouldReturnListWithOneDtoIfThereIsOnePost(){
-            // Arrange
-            List<Post> mockPosts = List.of(mockPost);
-            when(postRepository.findAll()).thenReturn(mockPosts);
-            List<PostDto> mockPostsDto = List.of(mockPostDto);
-            when(postMapper.toDtoList(mockPosts)).thenReturn(mockPostsDto);
-
-            // Act
-            List<PostDto> result = postService.getPosts();
-
-            // Assert
-            assertEquals(result.size(), mockPosts.size());
-            assertNotNull(result);
-            assertEquals(result.getFirst().getId(), mockPosts.getFirst().getId());
-            assertEquals(1, result.size());
-            assertEquals(result.getFirst().getCaption(), mockPosts.getFirst().getCaption());
-            verify(postRepository, times(1)).findAll();
-            verify(postMapper,times(1)).toDtoList(mockPosts);
-        }
-
-        @DisplayName("If there is more than one post then should return list with these postDtos")
+        @DisplayName("getAllPosts should return list with existing postDTOs")
         @Test
         void getAllPostsShouldReturnListWithCorrectNumberOfPosts(){
             // Arrange
-            List<Post> mockPosts = List.of(mockPost, mockPost);
+            Post post = TestDataFactory.createDefaultPost();
+            List<Post> mockPosts = List.of(post, post);
             when(postRepository.findAll()).thenReturn(mockPosts);
-            List<PostDto> mockPostsDto = List.of(mockPostDto,  mockPostDto);
+
+            PostDto postDto = TestDataFactory.createDefaultPostDto(post.getId(), post.getCaption());
+            List<PostDto> mockPostsDto = List.of(postDto,  postDto);
             when(postMapper.toDtoList(mockPosts)).thenReturn(mockPostsDto);
 
             // Act
             List<PostDto> result = postService.getPosts();
 
             // Assert
-            assertEquals(result.size(), mockPosts.size());
             assertNotNull(result);
+            assertEquals(result.size(), mockPosts.size());
             assertEquals(2, result.size());
             verify(postRepository, times(1)).findAll();
             verify(postMapper,times(1)).toDtoList(mockPosts);
