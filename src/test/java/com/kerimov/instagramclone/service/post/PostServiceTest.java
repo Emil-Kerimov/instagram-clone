@@ -34,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
-
+// TODO: commit              given...
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PostService Tests")
 class PostServiceTest {
@@ -52,78 +52,8 @@ class PostServiceTest {
     @InjectMocks
     private PostService postService;
 
-    private UUID existingPostId;
-    private UUID existingUserId;
-    private UUID nonExistingUserId;
-
-    private String bucketName = "images";
-
-    private String url = "http://localhost:9000";
-
-    private String mockContent = "Hello world! this is a new post content!";
-
-    private Post mockPost;
-    private PostDto mockPostDto;
-
-    private User mockUser;
-    private UserDto mockUserDto;
-
-    private MultipartFile mockCorrectMultipartFile;
-    private List<MultipartFile> mockCorrectMultipartFiles;
-
-
     @BeforeEach
     void setUp() {
-        existingPostId = UUID.randomUUID();
-
-        mockPost = new Post();
-        mockPost.setId(existingPostId);
-        mockPost.setCaption("Caption");
-
-        mockPostDto = new PostDto();
-        mockPostDto.setCaption("Caption");
-        mockPostDto.setId(existingPostId);
-
-
-        mockCorrectMultipartFile = new MockMultipartFile(
-                "file",
-                "dummy_image.png",
-                MediaType.IMAGE_PNG_VALUE,
-                mockContent.getBytes()
-        );
-        mockCorrectMultipartFiles = List.of(mockCorrectMultipartFile,mockCorrectMultipartFile);
-        mockUser = new User();
-        existingUserId =  UUID.randomUUID();
-        nonExistingUserId = UUID.randomUUID();
-        mockUser.setId(existingUserId);
-        mockUserDto = new UserDto();
-        mockUserDto.setId(existingUserId);
-
-        PostImage postImageOneMock = new PostImage(); //Builder
-        postImageOneMock.setId(UUID.randomUUID());
-        postImageOneMock.setStorageKey("Key1");
-        postImageOneMock.setPost(mockPost);
-        PostImage postImageSecondMock = new PostImage();
-        postImageSecondMock.setId(UUID.randomUUID());
-        postImageSecondMock.setStorageKey("Key2");
-        postImageSecondMock.setPost(mockPost);
-
-
-
-        mockPost.setImages(new ArrayList<>(List.of(postImageOneMock,postImageSecondMock)));
-        PostImageDto imageDtoOneMock = new PostImageDto();
-        imageDtoOneMock.setId(UUID.randomUUID());
-        imageDtoOneMock.setUrl(getFullUrl(postImageOneMock.getStorageKey()));
-        PostImageDto imageDtoSecondMock = new PostImageDto();
-        imageDtoSecondMock.setId(UUID.randomUUID());
-        imageDtoSecondMock.setUrl(getFullUrl(postImageSecondMock.getStorageKey()));
-        mockPostDto.setImages(List.of(imageDtoOneMock,imageDtoSecondMock));
-    }
-    String getFullUrl(String key){
-        return UriComponentsBuilder.fromUriString(url)
-                .pathSegment(bucketName)
-                .pathSegment(key)
-                .build().toUriString();
     }
 
     @Nested
@@ -136,7 +66,7 @@ class PostServiceTest {
             // Arrange
             Post defaultPost = TestDataFactory.createDefaultPost();
             UUID defaultPostId = defaultPost.getId();
-            PostDto defaultPostDto = TestDataFactory.createDefaultPostDto(defaultPostId, defaultPost.getCaption());
+            PostDto defaultPostDto = TestDataFactory.createDefaultPostDto(defaultPost);
             given(postRepository.findById(defaultPostId)).willReturn(Optional.of(defaultPost));
             given(postMapper.toDto(defaultPost)).willReturn(defaultPostDto);
 
@@ -190,7 +120,7 @@ class PostServiceTest {
             List<Post> mockPosts = List.of(post, post);
             when(postRepository.findAll()).thenReturn(mockPosts);
 
-            PostDto postDto = TestDataFactory.createDefaultPostDto(post.getId(), post.getCaption());
+            PostDto postDto = TestDataFactory.createDefaultPostDto(post);
             List<PostDto> mockPostsDto = List.of(postDto,  postDto);
             when(postMapper.toDtoList(mockPosts)).thenReturn(mockPostsDto);
 
@@ -223,10 +153,7 @@ class PostServiceTest {
             });
             when(postMapper.toDto(any(Post.class))).thenAnswer(invocationOnMock -> {
                 Post post =  invocationOnMock.getArgument(0);
-                PostDto postDto = TestDataFactory.createDefaultPostDto(post.getId(), post.getCaption());
-                UserDto userDto = TestDataFactory.createDefaultUserDto(post.getUser().getId());
-                postDto.setUser(userDto);
-                return postDto;
+                return TestDataFactory.mapPostToDto(post);
             });
             String content = "Test content";
 
@@ -312,26 +239,20 @@ class PostServiceTest {
     @DisplayName("Update Post Tests")
     class UpdatePostTests {
         @Test
-        @DisplayName("If all requirements are satisfied then should correctly update post and return dto")
+        @DisplayName("If we delete one image and add 2 new to post with 2 images, then should return post with 3 images")
         void updatePostHappyPathTest(){
-            when(postRepository.existsById(existingPostId)).thenReturn(true);
+            Post post = TestDataFactory.createPostWithImages(2);
+            UUID postId = post.getId();
+            String content = "mock content";
+            List<MultipartFile> files = TestDataFactory.createMockMultipartFiles();
+            when(postRepository.existsById(postId)).thenReturn(true);
             when(minioFileStorageService.upload(any(MultipartFile.class))).thenReturn("savedKey");
-            when(postRepository.findById(existingPostId)).thenReturn(Optional.of(mockPost));
+            when(postRepository.findById(postId)).thenReturn(Optional.of(post));
 
-            when(postRepository.save(any(Post.class))).thenReturn(mockPost);
+            when(postRepository.save(any(Post.class))).thenReturn(post);
             when(postMapper.toDto(any(Post.class))).thenAnswer(invocationOnMock -> {
-                Post post =  invocationOnMock.getArgument(0);
-                mockPostDto.setCaption(post.getCaption());
-                mockPostDto.setId(post.getId());
-                List<PostImageDto> images = new ArrayList<>();
-                for(PostImage image : post.getImages()){
-                    PostImageDto imageDto = new PostImageDto();
-                    imageDto.setId(image.getId());
-                    imageDto.setUrl(getFullUrl(image.getStorageKey()));
-                    images.add(imageDto);
-                }
-                mockPostDto.setImages(images);
-                return mockPostDto;
+                Post receivedPost =  invocationOnMock.getArgument(0);
+                return TestDataFactory.mapPostToDto(receivedPost);
             });
             when(transactionTemplate.execute(any())).thenAnswer(invocationOnMock -> {
                 TransactionSynchronizationManager.initSynchronization();
@@ -344,21 +265,19 @@ class PostServiceTest {
                 }
             });
 
-            UUID idToDelete = mockPost.getImages().getFirst().getId();
-            PostDto res = postService.updatePost(existingPostId, mockContent, mockCorrectMultipartFiles, List.of(idToDelete));
+            UUID idToDelete = post.getImages().getFirst().getId();
+            PostDto res = postService.updatePost(postId, content, files, List.of(idToDelete));
 
             assertNotNull(res);
-            assertEquals(existingPostId, res.getId());
-            assertEquals(res.getCaption(), mockContent);
+            assertEquals(postId, res.getId());
+            assertEquals(res.getCaption(), content);
             assertEquals(3, res.getImages().size());
 
-            verify(postRepository, times(1)).findById(existingPostId);
-            verify(postRepository, times(1)).existsById(existingPostId);
-            verify(minioFileStorageService, times(2)).upload(mockCorrectMultipartFile);
+            verify(postRepository, times(1)).findById(postId);
+            verify(postRepository, times(1)).existsById(postId);
+            verify(minioFileStorageService, times(2)).upload(any(MultipartFile.class));
             verify(postRepository, times(1)).save(any(Post.class));
             verify(postMapper,times(1)).toDto(any(Post.class));
         }
-
-
     }
 }
