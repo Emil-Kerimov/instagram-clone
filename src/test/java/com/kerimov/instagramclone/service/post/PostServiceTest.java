@@ -1,13 +1,10 @@
 package com.kerimov.instagramclone.service.post;
 
 import com.kerimov.instagramclone.dto.PostDto;
-import com.kerimov.instagramclone.dto.PostImageDto;
-import com.kerimov.instagramclone.dto.UserDto;
 import com.kerimov.instagramclone.exceptions.FileStorageServiceException;
 import com.kerimov.instagramclone.exceptions.ResourceNotFoundException;
 import com.kerimov.instagramclone.mapper.PostMapper;
 import com.kerimov.instagramclone.models.Post;
-import com.kerimov.instagramclone.models.PostImage;
 import com.kerimov.instagramclone.models.User;
 import com.kerimov.instagramclone.repository.PostRepository;
 import com.kerimov.instagramclone.repository.UserRepository;
@@ -18,15 +15,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.support.SimpleTransactionStatus;
 import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.*;
 
@@ -34,7 +27,6 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
 
-// TODO: commit              given...
 @ExtendWith(MockitoExtension.class)
 @DisplayName("PostService Tests")
 class PostServiceTest {
@@ -51,10 +43,6 @@ class PostServiceTest {
 
     @InjectMocks
     private PostService postService;
-
-    @BeforeEach
-    void setUp() {
-    }
 
     @Nested
     @DisplayName("get post by id tests")
@@ -87,7 +75,7 @@ class PostServiceTest {
         void getPostShouldThrowResourceNotFoundExceptionWhenPostDoesNotExist(){
             // Arrange
             UUID nonExistingId = UUID.randomUUID();
-            when(postRepository.findById(nonExistingId)).thenReturn(Optional.empty());
+            given(postRepository.findById(nonExistingId)).willReturn(Optional.empty());
 
             // Act Assert
             assertThrows(ResourceNotFoundException.class,
@@ -105,7 +93,7 @@ class PostServiceTest {
         @DisplayName("If there is no posts then should return empty list")
         @Test
         void getAllPostsShouldReturnEmptyListIfThereIsNoPost(){
-            when(postRepository.findAll()).thenReturn(new ArrayList<>());
+            given(postRepository.findAll()).willReturn(new ArrayList<>());
 
             assertTrue(postService.getPosts().isEmpty());
             verify(postRepository, times(1)).findAll();
@@ -118,11 +106,10 @@ class PostServiceTest {
             // Arrange
             Post post = TestDataFactory.createDefaultPost();
             List<Post> mockPosts = List.of(post, post);
-            when(postRepository.findAll()).thenReturn(mockPosts);
-
             PostDto postDto = TestDataFactory.createDefaultPostDto(post);
             List<PostDto> mockPostsDto = List.of(postDto,  postDto);
-            when(postMapper.toDtoList(mockPosts)).thenReturn(mockPostsDto);
+            given(postMapper.toDtoList(mockPosts)).willReturn(mockPostsDto);
+            given(postRepository.findAll()).willReturn(mockPosts);
 
             // Act
             List<PostDto> result = postService.getPosts();
@@ -142,28 +129,31 @@ class PostServiceTest {
         @Test
         @DisplayName("If all requirements are satisfied then should correctly create post and return dto")
         void createPostHappyPath(){
+            //Given
             User user =  TestDataFactory.createDefaultUser();
-            when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
-            when(minioFileStorageService.upload(any(MultipartFile.class))).thenReturn("savedKey");
-            when(postRepository.save(any(Post.class))).thenAnswer(invocation -> {
+            String content = "Test content";
+            List<MultipartFile> files = TestDataFactory.createMockMultipartFiles();
+
+            given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+            given(minioFileStorageService.upload(any(MultipartFile.class))).willReturn("savedKey");
+            given(postRepository.save(any(Post.class))).willAnswer(invocation -> {
                 Post saved_post = invocation.getArgument(0);
                 saved_post.setUser(user);
                 saved_post.setId(user.getId());
                 return saved_post;
             });
-            when(postMapper.toDto(any(Post.class))).thenAnswer(invocationOnMock -> {
+            given(postMapper.toDto(any(Post.class))).willAnswer(invocationOnMock -> {
                 Post post =  invocationOnMock.getArgument(0);
                 return TestDataFactory.mapPostToDto(post);
             });
-            String content = "Test content";
 
-            List<MultipartFile> files = TestDataFactory.createMockMultipartFiles();
+            //When
             PostDto res = postService.createPost(user.getId(), content, files);
 
+            //Then
             assertNotNull(res);
             assertEquals(user.getId(), res.getUser().getId());
             assertEquals(res.getCaption(), content);
-
             verify(userRepository, times(1)).findById(user.getId());
             verify(minioFileStorageService, times(2)).upload(any(MultipartFile.class));
             verify(postRepository, times(1)).save(any(Post.class));
@@ -176,10 +166,12 @@ class PostServiceTest {
         void createPostShouldThrowExceptionIfUserNotFound(){
             UUID nonExistingId = UUID.randomUUID();
             List<MultipartFile> files = TestDataFactory.createMockMultipartFiles();
-            when(userRepository.findById(nonExistingId)).thenReturn(Optional.empty());
+            given(userRepository.findById(nonExistingId)).willReturn(Optional.empty());
+
             assertThrows(ResourceNotFoundException.class,
                     () -> {postService.createPost(nonExistingId, "mock content", files);
             });
+
             verify(userRepository, times(1)).findById(nonExistingId);
             verifyNoInteractions(minioFileStorageService);
             verifyNoInteractions(postRepository);
@@ -189,14 +181,16 @@ class PostServiceTest {
         @Test
         @DisplayName("If uploads fails midway because of storage then should throw exception with correct msg and clean up trash(storage rollback)")
         void createPostShouldThrowExceptionAndCleanUpIfCantUploadToStorage(){
+            //given
             User user =  TestDataFactory.createDefaultUser();
             List<MultipartFile> files = TestDataFactory.createMockMultipartFiles();
             String savedKey = "savedKey";
-            when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
-            when(minioFileStorageService.upload(any(MultipartFile.class)))
-                    .thenReturn(savedKey)
-                    .thenThrow(new FileStorageServiceException("loading file to MinIO is not possible"));
+            given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+            given(minioFileStorageService.upload(any(MultipartFile.class)))
+                    .willReturn(savedKey)
+                    .willThrow(new FileStorageServiceException("loading file to MinIO is not possible"));
 
+            //when, then
             FileStorageServiceException exception = assertThrows(FileStorageServiceException.class,
                     () -> {postService.createPost(user.getId(), "mockContent", files);
                     });
@@ -205,7 +199,6 @@ class PostServiceTest {
             verify(userRepository, times(1)).findById(user.getId());
             verify(minioFileStorageService, times(2)).upload(any(MultipartFile.class));
             verify(minioFileStorageService, times(1)).delete(savedKey);
-
             verifyNoInteractions(postRepository);
             verifyNoInteractions(postMapper);
         }
@@ -213,19 +206,22 @@ class PostServiceTest {
         @Test
         @DisplayName("If saving to DB fails then should throw exception and clean up trash(storage rollback)")
         void createPostShouldThrowExceptionAndCleanUpIfCantSaveToDb(){
+            // Given
             User user = TestDataFactory.createDefaultUser();
             String savedKey = "savedKey";
             String savedKey2 = "savedKey2";
             List<MultipartFile> files = TestDataFactory.createMockMultipartFiles();
-            when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
-            when(minioFileStorageService.upload(any(MultipartFile.class)))
-                    .thenReturn(savedKey)
-                    .thenReturn(savedKey2);
-            when(postRepository.save(any(Post.class))).thenThrow(new RuntimeException());
+            given(userRepository.findById(user.getId())).willReturn(Optional.of(user));
+            given(minioFileStorageService.upload(any(MultipartFile.class)))
+                    .willReturn(savedKey)
+                    .willReturn(savedKey2);
+            given(postRepository.save(any(Post.class))).willThrow(new RuntimeException());
 
+            // When, Then
             RuntimeException exception = assertThrows(RuntimeException.class,
                     () -> {postService.createPost(user.getId(), "mockContent", files);
                     });
+
             assertNotNull(exception);
             verify(userRepository, times(1)).findById(user.getId());
             verify(minioFileStorageService, times(2)).upload(any(MultipartFile.class));
@@ -239,22 +235,23 @@ class PostServiceTest {
     @DisplayName("Update Post Tests")
     class UpdatePostTests {
         @Test
-        @DisplayName("If we delete one image and add 2 new to post with 2 images, then should return post with 3 images")
+        @DisplayName("If we delete one image and add 2 new to post with 2 images, then should return postDto with 3 images")
         void updatePostHappyPathTest(){
+            //Given
             Post post = TestDataFactory.createPostWithImages(2);
+            UUID idToDelete = post.getImages().getFirst().getId();
             UUID postId = post.getId();
             String content = "mock content";
             List<MultipartFile> files = TestDataFactory.createMockMultipartFiles();
-            when(postRepository.existsById(postId)).thenReturn(true);
-            when(minioFileStorageService.upload(any(MultipartFile.class))).thenReturn("savedKey");
-            when(postRepository.findById(postId)).thenReturn(Optional.of(post));
-
-            when(postRepository.save(any(Post.class))).thenReturn(post);
-            when(postMapper.toDto(any(Post.class))).thenAnswer(invocationOnMock -> {
+            given(postRepository.existsById(postId)).willReturn(true);
+            given(minioFileStorageService.upload(any(MultipartFile.class))).willReturn("savedKey");
+            given(postRepository.findById(postId)).willReturn(Optional.of(post));
+            given(postRepository.save(any(Post.class))).willReturn(post);
+            given(postMapper.toDto(any(Post.class))).willAnswer(invocationOnMock -> {
                 Post receivedPost =  invocationOnMock.getArgument(0);
                 return TestDataFactory.mapPostToDto(receivedPost);
             });
-            when(transactionTemplate.execute(any())).thenAnswer(invocationOnMock -> {
+            given(transactionTemplate.execute(any())).willAnswer(invocationOnMock -> {
                 TransactionSynchronizationManager.initSynchronization();
 
                 try {
@@ -265,9 +262,10 @@ class PostServiceTest {
                 }
             });
 
-            UUID idToDelete = post.getImages().getFirst().getId();
+            //When
             PostDto res = postService.updatePost(postId, content, files, List.of(idToDelete));
 
+            //Then
             assertNotNull(res);
             assertEquals(postId, res.getId());
             assertEquals(res.getCaption(), content);
@@ -278,6 +276,69 @@ class PostServiceTest {
             verify(minioFileStorageService, times(2)).upload(any(MultipartFile.class));
             verify(postRepository, times(1)).save(any(Post.class));
             verify(postMapper,times(1)).toDto(any(Post.class));
+        }
+        @Test
+        @DisplayName("when trying to update NonExisting Post Should Throw ResourceNotFoundException")
+        void updateNonExistingPostShouldThrowResourceNotFoundException(){
+            UUID nonExistingId = UUID.randomUUID();
+
+            ResourceNotFoundException e = assertThrows(ResourceNotFoundException.class, () ->postService.updatePost(nonExistingId,"new content",List.of(),List.of()));
+
+            assertNotNull(e);
+
+        }
+
+        @Test
+        @DisplayName("when exceptions occurs while uploading one of the images to storage, should throw exception and clean up")
+        void exceptionDuringSavingToStorageShouldThrowExceptionAndCleanUp(){
+            //Given
+            Post post = TestDataFactory.createPostWithImages(2);
+            UUID idToDelete = post.getImages().getFirst().getId();
+            UUID postId = post.getId();
+            String content = "mock content";
+            List<MultipartFile> files = TestDataFactory.createMockMultipartFiles();
+            given(postRepository.existsById(postId)).willReturn(true);
+            given(minioFileStorageService.upload(any(MultipartFile.class)))
+                    .willReturn("savedKey")
+                    .willThrow(FileStorageServiceException.class);
+
+            assertThrows(FileStorageServiceException.class, () -> postService.updatePost(postId, content, files, List.of(idToDelete)));
+            verify(postRepository, times(1)).existsById(postId);
+            verify(minioFileStorageService, times(1)).delete("savedKey");
+
+        }
+
+        @Test
+        @DisplayName("when exceptions occurs while saving post to DB, should throw exception and clean up")
+        void exceptionDuringSavingToDbShouldThrowExceptionAndCleanUp(){
+            //Given
+            Post post = TestDataFactory.createPostWithImages(2);
+            UUID idToDelete = post.getImages().getFirst().getId();
+            UUID postId = post.getId();
+            String content = "mock content";
+            List<MultipartFile> files = TestDataFactory.createMockMultipartFiles();
+
+            given(postRepository.existsById(postId)).willReturn(true);
+            given(minioFileStorageService.upload(any(MultipartFile.class)))
+                    .willReturn("savedKey")
+                    .willReturn("savedKey2");
+            given(postRepository.findById(postId)).willReturn(Optional.of(post));
+            given(postRepository.save(any(Post.class))).willThrow(RuntimeException.class);
+            given(transactionTemplate.execute(any())).willAnswer(invocationOnMock -> {
+                TransactionSynchronizationManager.initSynchronization();
+                try {
+                    TransactionCallback callback = invocationOnMock.getArgument(0);
+                    return callback.doInTransaction(new SimpleTransactionStatus());
+                } finally {
+                    TransactionSynchronizationManager.clearSynchronization();
+                }
+            });
+
+            assertThrows(RuntimeException.class, () -> postService.updatePost(postId, content, files, List.of(idToDelete)));
+
+            verify(postRepository, times(1)).existsById(postId);
+            verify(minioFileStorageService, times(2)).delete(any(String.class));
+
         }
     }
 }
