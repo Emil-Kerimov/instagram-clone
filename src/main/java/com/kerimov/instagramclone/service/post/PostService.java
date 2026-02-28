@@ -160,7 +160,7 @@ public class PostService implements IPostService {
             try {
                 minioFileStorageService.delete(key);
             } catch (FileStorageServiceException e) {
-                log.error("Exception occurs while trying to delete file with key: {}. ", key, e);
+                log.error("Exception occurs while trying to delete file with key: {}  from Storage", key, e);
             }
         }
     }
