@@ -15,10 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.transaction.support.SimpleTransactionStatus;
-import org.springframework.transaction.support.TransactionCallback;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
-import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.support.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
@@ -339,6 +336,39 @@ class PostServiceTest {
             verify(postRepository, times(1)).existsById(postId);
             verify(minioFileStorageService, times(2)).delete(any(String.class));
 
+        }
+    }
+
+    @Nested
+    @DisplayName("Delete post Tests")
+    class DeletePostTests{
+        @Test
+        @DisplayName("when trying to delete post with non-existing ID should throw RessourceNotFoundException")
+        void attemptToDeleteNonExistingPostShouldThrowResourceNotFoundException(){
+            UUID postId = UUID.randomUUID();
+            given(postRepository.findById(postId)).willThrow(ResourceNotFoundException.class);
+
+            assertThrows(ResourceNotFoundException.class, () -> postService.deletePostById(postId));
+
+            verify(postRepository, times(1)).findById(postId);
+        }
+
+        @Test
+        @DisplayName("when trying to delete post with 2 images should successfully delete exactly 2 images")
+        void deletePostHappyPath(){
+            Post post = TestDataFactory.createPostWithImages(2);
+            UUID postId = post.getId();
+            given(postRepository.findById(postId)).willReturn(Optional.of(post));
+            TransactionSynchronizationManager.initSynchronization();
+                try {
+                    postService.deletePostById(postId);
+                    TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+                } finally {
+                    TransactionSynchronizationManager.clearSynchronization();
+                }
+
+            verify(postRepository, times(1)).findById(postId);
+            verify(minioFileStorageService, times(2)).delete(any(String.class));
         }
     }
 }
