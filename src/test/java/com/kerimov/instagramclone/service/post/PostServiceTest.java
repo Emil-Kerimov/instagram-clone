@@ -22,6 +22,7 @@ import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -367,8 +368,28 @@ class PostServiceTest {
                     TransactionSynchronizationManager.clearSynchronization();
                 }
 
-            verify(postRepository, times(1)).findById(postId);
             verify(minioFileStorageService, times(2)).delete(any(String.class));
+            verify(postRepository,times(1)).delete(post);
+        }
+
+        @Test
+        @DisplayName("when during deleting post exception occurs in Storage deleting, should delete data from DB and successfully return from method")
+        void deleteIgnoringStorageResult(){
+            Post post = TestDataFactory.createPostWithImages(2);
+            UUID postId = post.getId();
+            given(postRepository.findById(postId)).willReturn(Optional.of(post));
+            willThrow(FileStorageServiceException.class).given(minioFileStorageService).delete(any(String.class));
+            TransactionSynchronizationManager.initSynchronization();
+            try {
+                assertDoesNotThrow(() -> postService.deletePostById(postId));
+                TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+            } finally {
+                TransactionSynchronizationManager.clearSynchronization();
+            }
+            System.out.println(post.getImages().size());
+
+            verify(minioFileStorageService, times(2)).delete(any(String.class));
+            verify(postRepository,times(1)).delete(post);
         }
     }
 }
